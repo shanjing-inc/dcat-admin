@@ -85,11 +85,43 @@ abstract class ServiceProvider extends LaravelServiceProvider
     {
         $this->autoRegister();
 
+        // 只在 admin 请求下才加载扩展，避免每次请求都查询扩展表
+        if (!$this->isAdminRequest()) {
+            return;
+        }
+
         if ($this->disabled()) {
             return;
         }
 
         $this->init();
+    }
+
+    /**
+     * 判断当前请求是否为 admin 请求
+     *
+     * @return bool
+     */
+    protected function isAdminRequest(): bool
+    {
+        // 获取 admin 路由配置
+        $adminPrefix = config('admin.route.prefix');
+        $adminDomain = config('admin.route.domain');
+
+        $request = request();
+
+        // 如果配置了 admin 域名，检查域名是否匹配
+        if ($adminDomain && $request->getHost() !== $adminDomain) {
+            return false;
+        }
+
+        // 如果没有配置 prefix，则认为是 admin 请求（走当前域名）
+        if (empty($adminPrefix)) {
+            return true;
+        }
+
+        // 获取 path 的第一个段，判断是否等于 prefix
+        return $request->segment(1) === $adminPrefix;
     }
 
     /**
